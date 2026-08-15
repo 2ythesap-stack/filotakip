@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Filo Yönetim - Demo (Çevrimdışı)</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f2f2f7; color: #1c1c1e; }
+  .app { max-width: 430px; margin: 0 auto; min-height: 100vh; position: relative; }
+  .header { background: #007AFF; color: white; padding: 16px 20px; padding-top: env(safe-area-inset-top, 16px); position: sticky; top: 0; z-index: 100; }
+  .header h1 { font-size: 20px; font-weight: 700; }
+  .header p { font-size: 13px; opacity: 0.9; margin-top: 2px; }
+  .nav { display: flex; background: white; border-bottom: 1px solid #e5e5ea; overflow-x: auto; scrollbar-width: none; }
+  .nav::-webkit-scrollbar { display: none; }
+  .nav-btn { flex: 1; min-width: 80px; padding: 12px 8px; border: none; background: none; font-size: 12px; font-weight: 600; color: #8e8e93; cursor: pointer; white-space: nowrap; }
+  .nav-btn.active { color: #007AFF; border-bottom: 2px solid #007AFF; }
+  .screen { display: none; padding: 12px; padding-bottom: 80px; }
+  .screen.active { display: block; }
+  .card { background: white; border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.06); }
+  .card-title { font-size: 15px; font-weight: 700; margin-bottom: 12px; color: #1c1c1e; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-box { padding: 16px 12px; border-radius: 12px; text-align: center; }
+  .stat-box h3 { font-size: 26px; font-weight: 800; margin-bottom: 4px; }
+  .stat-box p { font-size: 11px; font-weight: 600; opacity: 0.9; }
+  .list-item { padding: 14px 0; border-bottom: 1px solid #f2f2f7; display: flex; justify-content: space-between; align-items: center; }
+  .list-item:last-child { border-bottom: none; }
+  .plate { font-size: 17px; font-weight: 800; color: #007AFF; }
+  .model { font-size: 13px; color: #666; margin-top: 2px; }
+  .km { font-size: 12px; color: #999; margin-top: 3px; }
+  .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 700; }
+  .badge-green { background: #e5f9ee; color: #30d158; }
+  .badge-orange { background: #fff4e5; color: #ff9f0a; }
+  .badge-red { background: #ffe5e5; color: #ff453a; }
+  .badge-blue { background: #e5f0ff; color: #007AFF; }
+  .badge-purple { background: #f0e5ff; color: #af52de; }
+  .fab { position: fixed; bottom: 24px; right: 24px; width: 56px; height: 56px; background: #007AFF; border-radius: 50%; display: flex; align-items: center; justify-content: center; color: white; font-size: 24px; box-shadow: 0 4px 12px rgba(0,122,255,0.4); border: none; cursor: pointer; z-index: 50; }
+  .form-group { margin-bottom: 14px; }
+  .form-group label { display: block; font-size: 13px; font-weight: 600; color: #666; margin-bottom: 6px; }
+  .form-group input, .form-group select { width: 100%; padding: 12px 14px; border: 1px solid #e5e5ea; border-radius: 10px; font-size: 16px; background: #fafafa; -webkit-appearance: none; }
+  .btn { width: 100%; padding: 14px; border: none; border-radius: 12px; font-size: 16px; font-weight: 700; cursor: pointer; margin-top: 8px; }
+  .btn-primary { background: #007AFF; color: white; }
+  .btn-success { background: #34c759; color: white; }
+  .alert { padding: 12px 16px; border-radius: 10px; margin-bottom: 12px; font-size: 13px; }
+  .alert-info { background: #e5f0ff; color: #007AFF; }
+  .alert-success { background: #e5f9ee; color: #30d158; }
+  .alert-error { background: #ffe5e5; color: #ff453a; }
+  .detail-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #f2f2f7; }
+  .detail-row:last-child { border-bottom: none; }
+  .detail-label { color: #666; font-size: 14px; }
+  .detail-value { font-weight: 700; color: #1c1c1e; font-size: 14px; }
+  .section-title { font-size: 13px; font-weight: 700; color: #8e8e93; text-transform: uppercase; letter-spacing: 0.5px; margin: 20px 16px 8px; }
+  .timeline { border-left: 2px solid #e5e5ea; margin-left: 8px; padding-left: 16px; }
+  .timeline-item { position: relative; padding-bottom: 16px; }
+  .timeline-item::before { content: ''; position: absolute; left: -21px; top: 2px; width: 10px; height: 10px; border-radius: 50%; background: #007AFF; }
+  .timeline-date { font-size: 11px; color: #8e8e93; }
+  .timeline-title { font-size: 14px; font-weight: 700; margin-top: 2px; }
+  .timeline-desc { font-size: 13px; color: #666; margin-top: 2px; }
+  .empty-state { text-align: center; padding: 40px 20px; color: #999; }
+  .search-box { width: 100%; padding: 12px 16px; border: 1px solid #e5e5ea; border-radius: 10px; font-size: 16px; margin-bottom: 12px; background: white; }
+  .bottom-sheet { position: fixed; bottom: 0; left: 0; right: 0; background: white; border-radius: 20px 20px 0 0; padding: 20px; max-height: 85vh; overflow-y: auto; z-index: 200; transform: translateY(100%); transition: transform 0.3s ease; box-shadow: 0 -4px 20px rgba(0,0,0,0.15); }
+  .bottom-sheet.open { transform: translateY(0); }
+  .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 150; display: none; }
+  .overlay.show { display: block; }
+  .sheet-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
+  .sheet-header h2 { font-size: 18px; }
+  .close-btn { background: none; border: none; font-size: 24px; color: #999; cursor: pointer; }
+</style>
+</head>
+<body>
+<div class="app">
+  <div class="header">
+    <h1>🚛 Filo Yönetim</h1>
+    <p>Demo Modu - Gerçek API bağlantısı yok</p>
+  </div>
+
+  <div class="nav">
+    <button class="nav-btn active" onclick="showScreen('dashboard')">📊 Dashboard</button>
+    <button class="nav-btn" onclick="showScreen('vehicles')">🚗 Araçlar</button>
+    <button class="nav-btn" onclick="showScreen('tasks')">📋 İşler</button>
+    <button class="nav-btn" onclick="showScreen('reports')">📈 Rapor</button>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div id="dashboard" class="screen active">
+    <div class="alert alert-info">💡 Bu demo çevrimdışı çalışır. Gerçek API için backend kurulumu gerekir.</div>
+    <div class="card">
+      <div class="card-title">📊 Filo Özeti</div>
+      <div class="stat-grid">
+        <div class="stat-box" style="background:#e5f0ff"><h3 style="color:#007AFF">12</h3><p style="color:#007AFF">Toplam Araç</p></div>
+        <div class="stat-box" style="background:#e5f9ee"><h3 style="color:#30d158">10</h3><p style="color:#30d158">Aktif</p></div>
+        <div class="stat-box" style="background:#fff4e5"><h3 style="color:#ff9f0a">1</h3><p style="color:#ff9f0a">Serviste</p></div>
+        <div class="stat-box" style="background:#ffe5e5"><h3 style="color:#ff453a">1</h3><p style="color:#ff453a">Kullanım Dışı</p></div>
+        <div class="stat-box" style="background:#f0e5ff"><h3 style="color:#af52de">5</h3><p style="color:#af52de">Bekleyen İş</p></div>
+        <div class="stat-box" style="background:#e5f0ff"><h3 style="color:#007AFF">2</h3><p style="color:#007AFF">Geciken</p></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">💰 Finansal Özet</div>
+      <div class="detail-row"><span class="detail-label">Bu Ay Gider</span><span class="detail-value" style="color:#ff453a">₺45.250</span></div>
+      <div class="detail-row"><span class="detail-label">Bu Yıl Gider</span><span class="detail-value" style="color:#ff453a">₺523.800</span></div>
+      <div class="detail-row"><span class="detail-label">Araç Başı Ort.</span><span class="detail-value">₺43.650</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">⚠️ Yaklaşan Uyarılar</div>
+      <div class="list-item">
+        <div><div style="font-weight:700">35 DC 2468</div><div style="font-size:12px;color:#666">Sigorta bitişi: 20.08.2026</div></div>
+        <span class="badge badge-red">5 gün</span>
+      </div>
+      <div class="list-item">
+        <div><div style="font-weight:700">35 DC 2670</div><div style="font-size:12px;color:#666">Muayene: 25.08.2026</div></div>
+        <span class="badge badge-orange">10 gün</span>
+      </div>
+      <div class="list-item">
+        <div><div style="font-weight:700">35 DC 186</div><div style="font-size:12px;color:#666">Bakım: 01.09.2026</div></div>
+        <span class="badge badge-blue">20 gün</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- VEHICLES -->
+  <div id="vehicles" class="screen">
+    <input type="text" class="search-box" placeholder="🔍 Plaka veya marka ara..." onkeyup="filterVehicles(this.value)">
+    <div id="vehicleList"></div>
+    <button class="fab" onclick="openSheet('addVehicleSheet')">+</button>
+  </div>
+
+  <!-- TASKS -->
+  <div id="tasks" class="screen">
+    <div class="card">
+      <div class="card-title">📋 Bekleyen İşler</div>
+      <div id="taskList"></div>
+    </div>
+  </div>
+
+  <!-- REPORTS -->
+  <div id="reports" class="screen">
+    <div class="card">
+      <div class="card-title">📈 Aylık Gider Dağılımı (2026)</div>
+      <div class="detail-row"><span class="detail-label">Ocak</span><span class="detail-value">₺38.500</span></div>
+      <div class="detail-row"><span class="detail-label">Şubat</span><span class="detail-value">₺42.100</span></div>
+      <div class="detail-row"><span class="detail-label">Mart</span><span class="detail-value">₺35.800</span></div>
+      <div class="detail-row"><span class="detail-label">Nisan</span><span class="detail-value">₺51.200</span></div>
+      <div class="detail-row"><span class="detail-label">Mayıs</span><span class="detail-value">₺44.600</span></div>
+      <div class="detail-row"><span class="detail-label">Haziran</span><span class="detail-value">₺39.900</span></div>
+      <div class="detail-row"><span class="detail-label">Temmuz</span><span class="detail-value">₺48.300</span></div>
+      <div class="detail-row"><span class="detail-label">Ağustos</span><span class="detail-value" style="color:#ff453a">₺45.250</span></div>
+    </div>
+    <div class="card">
+      <div class="card-title">🏆 En Çok Masraf Çıkaran Araçlar</div>
+      <div class="list-item"><div><span class="plate">35 DC 2468</span><div class="model">Mercedes Actros</div></div><span class="detail-value">₺98.500</span></div>
+      <div class="list-item"><div><span class="plate">35 DC 2670</span><div class="model">Ford Cargo</div></div><span class="detail-value">₺76.200</span></div>
+      <div class="list-item"><div><span class="plate">35 DC 186</span><div class="model">Scania R500</div></div><span class="detail-value">₺65.800</span></div>
+    </div>
+  </div>
+
+  <!-- VEHICLE CARD DETAIL (Overlay) -->
+  <div id="vehicleDetail" style="display:none">
+    <div class="section-title" style="margin-top:0">← Geri</div>
+    <div id="vehicleDetailContent"></div>
+  </div>
+</div>
+
+<!-- BOTTOM SHEETS -->
+<div class="overlay" id="overlay" onclick="closeAllSheets()"></div>
+
+<div class="bottom-sheet" id="addVehicleSheet">
+  <div class="sheet-header"><h2>➕ Yeni Araç</h2><button class="close-btn" onclick="closeAllSheets()">×</button></div>
+  <div class="form-group"><label>Plaka</label><input type="text" id="newPlate" placeholder="35 DC 2468"></div>
+  <div class="form-group"><label>Marka</label><input type="text" id="newBrand" placeholder="Mercedes"></div>
+  <div class="form-group"><label>Model</label><input type="text" id="newModel" placeholder="Actros"></div>
+  <div class="form-group"><label>KM</label><input type="number" id="newKm" placeholder="185420"></div>
+  <button class="btn btn-primary" onclick="addVehicle()">💾 Kaydet</button>
+</div>
+
+<div class="bottom-sheet" id="addMaintenanceSheet">
+  <div class="sheet-header"><h2>🔧 Bakım Kaydı</h2><button class="close-btn" onclick="closeAllSheets()">×</button></div>
+  <div class="form-group"><label>KM</label><input type="number" id="maintKm" placeholder="185500"></div>
+  <div class="form-group"><label>Bakım Tipi</label><select id="maintType"><option>Periyodik Bakım</option><option>Yağ Değişimi</option><option>Fren Sistemi</option><option>Lastik Değişimi</option><option>Diğer</option></select></div>
+  <div class="form-group"><label>Açıklama</label><input type="text" id="maintDesc" placeholder="Yağ ve filtre değişimi"></div>
+  <div class="form-group"><label>Tutar (TL)</label><input type="number" id="maintAmount" placeholder="12500"></div>
+  <button class="btn btn-primary" onclick="addMaintenance()">💾 Kaydet</button>
+  <p style="font-size:12px;color:#999;margin-top:8px">💡 Gerçek API bağlı olsaydı KM kontrolü yapılacaktı</p>
+</div>
+
+<script>
+// Mock Data
+let vehicles = [
+  { id: 1, plate: '35 DC 2468', brand: 'Mercedes', model: 'Actros', modelYear: 2024, currentKm: 185420, status: 'active', totalExpense: 98500 },
+  { id: 2, plate: '35 DC 2670', brand: 'Ford', model: 'Cargo', modelYear: 2022, currentKm: 234500, status: 'active', totalExpense: 76200 },
+  { id: 3, plate: '35 DC 186', brand: 'Scania', model: 'R500', modelYear: 2023, currentKm: 156800, status: 'in_service', totalExpense: 65800 },
+  { id: 4, plate: '34 ABC 123', brand: 'Mercedes', model: 'Sprinter', modelYear: 2023, currentKm: 50000, status: 'active', totalExpense: 12500 },
+  { id: 5, plate: '35 DC 999', brand: 'Volvo', model: 'FH16', modelYear: 2021, currentKm: 312000, status: 'out_of_use', totalExpense: 145000 },
+];
+
+let tasks = [
+  { id: 1, title: '35 DC 2468 - Sigorta Yenileme', status: 'pending', priority: 'high', dueDate: '2026-08-20', vehicle: '35 DC 2468' },
+  { id: 2, title: '35 DC 2670 - Muayene', status: 'pending', priority: 'medium', dueDate: '2026-08-25', vehicle: '35 DC 2670' },
+  { id: 3, title: '35 DC 186 - Bakım', status: 'in_progress', priority: 'medium', dueDate: '2026-09-01', vehicle: '35 DC 186' },
+  { id: 4, title: '34 ABC 123 - Kasko Yenileme', status: 'delayed', priority: 'urgent', dueDate: '2026-08-05', vehicle: '34 ABC 123' },
+  { id: 5, title: '35 DC 999 - Satış İşlemleri', status: 'pending', priority: 'low', dueDate: '2026-09-15', vehicle: '35 DC 999' },
+];
+
+let maintenances = [
+  { id: 1, vehicleId: 1, date: '2026-07-15', km: 182000, type: 'Periyodik Bakım', desc: 'Yağ, filtre, fren kontrolü', amount: 12450, service: 'Enes Oto' },
+  { id: 2, vehicleId: 1, date: '2026-05-20', km: 178500, type: 'Lastik Değişimi', desc: '4 adet ön lastik', amount: 48000, service: 'XYZ Lastik' },
+  { id: 3, vehicleId: 1, date: '2026-03-10', km: 172000, type: 'Tamir', desc: 'Egzoz manifoldu tamiri', amount: 18500, service: 'Enes Oto' },
+];
+
+let tires = [
+  { id: 1, brand: 'Michelin', model: 'X Multi', size: '315/80 R22.5', dot: '2525', treadDepth: 12.5, position: 'Ön Sağ', mountedDate: '2026-05-20' },
+  { id: 2, brand: 'Michelin', model: 'X Multi', size: '315/80 R22.5', dot: '2525', treadDepth: 12.5, position: 'Ön Sol', mountedDate: '2026-05-20' },
+];
+
+let selectedVehicleId = null;
+
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  if (id === 'vehicles') renderVehicles();
+  if (id === 'tasks') renderTasks();
+}
+
+function renderVehicles(filter = '') {
+  const list = document.getElementById('vehicleList');
+  const filtered = vehicles.filter(v => 
+    v.plate.toLowerCase().includes(filter.toLowerCase()) ||
+    v.brand.toLowerCase().includes(filter.toLowerCase())
+  );
+
+  const statusMap = {
+    active: { text: 'Aktif', class: 'badge-green' },
+    in_service: { text: 'Serviste', class: 'badge-orange' },
+    out_of_use: { text: 'Kullanım Dışı', class: 'badge-red' },
+    sold: { text: 'Satıldı', class: 'badge-purple' },
+  };
+
+  list.innerHTML = filtered.map(v => {
+    const s = statusMap[v.status];
+    return `<div class="card" onclick="showVehicleDetail(${v.id})" style="cursor:pointer">
+      <div class="list-item" style="border-bottom:none;padding:0">
+        <div>
+          <div class="plate">${v.plate}</div>
+          <div class="model">${v.brand} ${v.model} (${v.modelYear})</div>
+          <div class="km">🛣️ ${v.currentKm.toLocaleString('tr-TR')} km | 💰 ₺${v.totalExpense.toLocaleString('tr-TR')}</div>
+        </div>
+        <span class="badge ${s.class}">${s.text}</span>
+      </div>
+    </div>`;
+  }).join('') || '<div class="empty-state">Araç bulunamadı</div>';
+}
+
+function filterVehicles(val) { renderVehicles(val); }
+
+function showVehicleDetail(id) {
+  selectedVehicleId = id;
+  const v = vehicles.find(x => x.id === id);
+  const m = maintenances.filter(x => x.vehicleId === id);
+  const t = tires.filter(x => x.vehicleId === id);
+
+  document.getElementById('vehicles').innerHTML = `
+    <div style="padding:12px">
+      <button onclick="restoreVehicles()" style="background:none;border:none;color:#007AFF;font-size:15px;font-weight:600;margin-bottom:12px">← Araçlara Dön</button>
+      <div class="card">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px">
+          <div><div class="plate" style="font-size:22px">${v.plate}</div><div class="model">${v.brand} ${v.model}</div></div>
+          <span class="badge badge-green">Aktif</span>
+        </div>
+        <div class="detail-row"><span class="detail-label">Güncel KM</span><span class="detail-value">${v.currentKm.toLocaleString('tr-TR')}</span></div>
+        <div class="detail-row"><span class="detail-label">Toplam Gider</span><span class="detail-value" style="color:#ff453a">₺${v.totalExpense.toLocaleString('tr-TR')}</span></div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">🔧 Bakım Geçmişi (${m.length})</div>
+        ${m.length ? m.map(x => `
+          <div class="timeline-item">
+            <div class="timeline-date">${x.date} | ${x.km.toLocaleString('tr-TR')} km</div>
+            <div class="timeline-title">${x.type}</div>
+            <div class="timeline-desc">${x.desc} | ${x.service} | ₺${x.amount.toLocaleString('tr-TR')}</div>
+          </div>
+        `).join('') : '<div style="color:#999;font-size:13px">Bakım kaydı yok</div>'}
+      </div>
+
+      <div class="card">
+        <div class="card-title">🛞 Lastikler (${t.length})</div>
+        ${t.length ? t.map(x => `
+          <div class="list-item" style="padding:8px 0">
+            <div><div style="font-weight:700">${x.brand} ${x.model}</div><div style="font-size:12px;color:#666">${x.size} | DOT: ${x.dot} | Diş: ${x.treadDepth}mm</div></div>
+            <span class="badge badge-blue">${x.position}</span>
+          </div>
+        `).join('') : '<div style="color:#999;font-size:13px">Lastik kaydı yok</div>'}
+      </div>
+
+      <button class="btn btn-primary" onclick="openSheet('addMaintenanceSheet')">🔧 Bakım Ekle</button>
+    </div>
+  `;
+}
+
+function restoreVehicles() {
+  document.getElementById('vehicles').innerHTML = `
+    <input type="text" class="search-box" placeholder="🔍 Plaka veya marka ara..." onkeyup="filterVehicles(this.value)">
+    <div id="vehicleList"></div>
+    <button class="fab" onclick="openSheet('addVehicleSheet')">+</button>
+  `;
+  renderVehicles();
+}
+
+function renderTasks() {
+  const list = document.getElementById('taskList');
+  const statusMap = {
+    pending: { text: 'Bekliyor', class: 'badge-orange' },
+    in_progress: { text: 'Devam Ediyor', class: 'badge-blue' },
+    delayed: { text: 'Gecikti', class: 'badge-red' },
+    completed: { text: 'Tamamlandı', class: 'badge-green' },
+  };
+  list.innerHTML = tasks.map(t => {
+    const s = statusMap[t.status];
+    return `<div class="list-item">
+      <div><div style="font-weight:700;font-size:14px">${t.title}</div><div style="font-size:12px;color:#666">Son tarih: ${t.dueDate}</div></div>
+      <span class="badge ${s.class}">${s.text}</span>
+    </div>`;
+  }).join('');
+}
+
+function openSheet(id) {
+  document.getElementById('overlay').classList.add('show');
+  document.getElementById(id).classList.add('open');
+}
+
+function closeAllSheets() {
+  document.querySelectorAll('.bottom-sheet').forEach(s => s.classList.remove('open'));
+  document.getElementById('overlay').classList.remove('show');
+}
+
+function addVehicle() {
+  const plate = document.getElementById('newPlate').value;
+  const brand = document.getElementById('newBrand').value;
+  const model = document.getElementById('newModel').value;
+  const km = document.getElementById('newKm').value;
+  if (!plate || !brand || !model) { alert('Plaka, marka ve model zorunludur!'); return; }
+  vehicles.unshift({ id: Date.now(), plate: plate.toUpperCase(), brand, model, currentKm: parseInt(km)||0, status: 'active', totalExpense: 0 });
+  closeAllSheets();
+  renderVehicles();
+  alert('✅ Araç eklendi! (Demo modu - gerçek API'ye kaydedilmedi)');
+}
+
+function addMaintenance() {
+  const km = parseInt(document.getElementById('maintKm').value);
+  const type = document.getElementById('maintType').value;
+  const desc = document.getElementById('maintDesc').value;
+  const amount = parseFloat(document.getElementById('maintAmount').value);
+  if (!km || !desc || !amount) { alert('Tüm alanları doldurun!'); return; }
+
+  // KM kontrolü simülasyonu
+  const v = vehicles.find(x => x.id === selectedVehicleId);
+  if (v && km < v.currentKm) {
+    alert(`❌ Hatalı KM! Son kayıtlı KM: ${v.currentKm.toLocaleString('tr-TR')}`);
+    return;
+  }
+
+  maintenances.unshift({
+    id: Date.now(), vehicleId: selectedVehicleId,
+    date: new Date().toISOString().split('T')[0], km, type, desc, amount, service: 'Enes Oto'
+  });
+  if (v) { v.currentKm = km; v.totalExpense += amount; }
+  closeAllSheets();
+  showVehicleDetail(selectedVehicleId);
+  alert('✅ Bakım kaydedildi! (Demo modu)');
+}
+
+// İlk yükleme
+renderVehicles();
+</script>
+</body>
+</html>

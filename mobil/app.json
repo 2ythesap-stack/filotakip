@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Filo Yönetim",
+    "slug": "filo-yonetim",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "assetBundlePatterns": ["**/*"],
+    "ios": { "supportsTablet": true },
+    "android": { "adaptiveIcon": { "backgroundColor": "#007AFF" } },
+    "extra": {
+      "apiUrl": "http://192.168.1.105:3000"
+    }
+  }
+}

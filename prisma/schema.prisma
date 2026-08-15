@@ -1,0 +1,550 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Enumlar
+enum VehicleStatus {
+  active
+  in_service
+  out_of_use
+  sold
+}
+
+enum TaskStatus {
+  pending
+  in_progress
+  on_hold
+  completed
+  delayed
+  cancelled
+}
+
+enum TaskPriority {
+  low
+  medium
+  high
+  urgent
+}
+
+enum TireSeason {
+  summer
+  winter
+  all_season
+}
+
+enum TirePosition {
+  front_right
+  front_left
+  rear_right
+  rear_left
+  inner
+  outer
+}
+
+enum CompanyType {
+  mechanic
+  service
+  tire_shop
+  insurance_agency
+  casco_agency
+  tow_truck
+  parts_supplier
+  other
+}
+
+enum ExpenseCategory {
+  maintenance
+  repair
+  casco
+  traffic_insurance
+  tire
+  fuel
+  inspection
+  tax
+  hgs_ogs
+  parking
+  washing
+  parts
+  other
+}
+
+enum NotificationType {
+  info
+  warning
+  urgent
+  overdue
+}
+
+// 1. Kullanıcılar
+model User {
+  id        Int      @id @default(autoincrement())
+  fullName  String   @map("full_name")
+  email     String   @unique
+  phone     String?
+  password  String
+  role      String   @default("user")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  responsibleFor Vehicle[] @relation("VehicleResponsible")
+  tasksCreated   Task[]    @relation("TaskCreatedBy")
+  tasksAssigned  Task[]    @relation("TaskAssignedTo")
+  maintenances   Maintenance[]
+  repairs        Repair[]
+  cascoRecords   Casco[]
+  insuranceRecords Insurance[]
+  damages        Damage[]
+  expenses       Expense[]
+  documents      Document[]
+  notifications  Notification[]
+  tireHistory    TireHistory[]
+  auditLogs      AuditLog[]
+  vehicleHistory VehicleHistory[]
+
+  @@map("users")
+}
+
+// 2. Firmalar
+model Company {
+  id            Int         @id @default(autoincrement())
+  name          String
+  companyType   CompanyType @map("company_type")
+  authorizedPerson String?  @map("authorized_person")
+  contactPerson String?     @map("contact_person")
+  phone         String?
+  altPhone      String?     @map("alt_phone")
+  email         String?
+  address       String?
+  mapLocation   String?     @map("map_location")
+  workingHours  String?     @map("working_hours")
+  notes         String?
+  totalPayment  Decimal     @default(0) @map("total_payment") @db.Decimal(15, 2)
+  createdAt     DateTime    @default(now()) @map("created_at")
+  updatedAt     DateTime    @updatedAt @map("updated_at")
+
+  maintenances Maintenance[]
+  repairs      Repair[]
+  cascoRecords Casco[]
+  insuranceRecords Insurance[]
+  insuranceAgencyFor Insurance[] @relation("InsuranceAgency")
+  damages      Damage[]
+  expenses     Expense[]
+  contacts     CompanyContact[]
+
+  @@map("companies")
+}
+
+// 3. Firma Yetkilileri
+model CompanyContact {
+  id         Int     @id @default(autoincrement())
+  companyId  Int     @map("company_id")
+  name       String
+  role       String?
+  phone      String?
+  email      String?
+  isPrimary  Boolean @default(false) @map("is_primary")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@map("company_contacts")
+}
+
+// 4. Araçlar
+model Vehicle {
+  id                 Int           @id @default(autoincrement())
+  plate              String        @unique
+  brand              String
+  model              String
+  modelYear          Int?          @map("model_year")
+  vehicleType        String?       @map("vehicle_type")
+  fuelType           String?       @map("fuel_type")
+  chassisNumber      String?       @map("chassis_number")
+  engineNumber       String?       @map("engine_number")
+  currentKm          Int           @default(0) @map("current_km")
+  status             VehicleStatus @default(active)
+  responsiblePersonId Int?         @map("responsible_person_id")
+  photoUrl           String?       @map("photo_url")
+  registrationInfo   Json?         @map("registration_info")
+  createdAt          DateTime      @default(now()) @map("created_at")
+  updatedAt          DateTime      @updatedAt @map("updated_at")
+
+  responsiblePerson User?         @relation("VehicleResponsible", fields: [responsiblePersonId], references: [id])
+  tasks            Task[]
+  maintenances     Maintenance[]
+  repairs          Repair[]
+  cascoRecords     Casco[]
+  insuranceRecords Insurance[]
+  damages          Damage[]
+  expenses         Expense[]
+  documents        Document[]
+  tires            Tire[]        @relation("CurrentVehicle")
+  tireHistory      TireHistory[]
+  notifications    Notification[]
+  vehicleHistory   VehicleHistory[]
+
+  @@index([plate])
+  @@index([status])
+  @@map("vehicles")
+}
+
+// 5. İşler
+model Task {
+  id             Int          @id @default(autoincrement())
+  title          String
+  description    String?
+  taskType       String       @map("task_type")
+  status         TaskStatus   @default(pending)
+  priority       TaskPriority @default(medium)
+  dueDate        DateTime?    @map("due_date")
+  completedDate  DateTime?    @map("completed_date")
+  assignedTo     Int?         @map("assigned_to")
+  vehicleId      Int?         @map("vehicle_id")
+  estimatedCost  Decimal?     @map("estimated_cost") @db.Decimal(15, 2)
+  actualCost     Decimal?     @map("actual_cost") @db.Decimal(15, 2)
+  attachments    Json?
+  createdBy      Int          @map("created_by")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  assignedUser User?   @relation("TaskAssignedTo", fields: [assignedTo], references: [id])
+  vehicle      Vehicle? @relation(fields: [vehicleId], references: [id])
+  creator      User    @relation("TaskCreatedBy", fields: [createdBy], references: [id])
+
+  @@index([status])
+  @@index([dueDate])
+  @@index([vehicleId])
+  @@map("tasks")
+}
+
+// 6. Bakım Kayıtları
+model Maintenance {
+  id              Int      @id @default(autoincrement())
+  vehicleId       Int      @map("vehicle_id")
+  maintenanceDate DateTime @map("maintenance_date") @db.Date
+  km              Int
+  maintenanceType String   @map("maintenance_type")
+  description     String
+  serviceId       Int?     @map("service_id")
+  mechanicName    String?  @map("mechanic_name")
+  laborCost       Decimal  @default(0) @map("labor_cost") @db.Decimal(15, 2)
+  totalAmount     Decimal  @map("total_amount") @db.Decimal(15, 2)
+  invoiceUrl      String?  @map("invoice_url")
+  photos          Json?
+  notes           String?
+  createdBy       Int      @map("created_by")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  vehicle Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  service Company? @relation(fields: [serviceId], references: [id])
+  creator User     @relation(fields: [createdBy], references: [id])
+  parts   MaintenancePart[]
+
+  @@index([vehicleId])
+  @@index([maintenanceDate])
+  @@map("maintenance")
+}
+
+// 7. Bakım Parçaları
+model MaintenancePart {
+  id           Int      @id @default(autoincrement())
+  maintenanceId Int     @map("maintenance_id")
+  partName     String   @map("part_name")
+  brand        String?
+  quantity     Int      @default(1)
+  unitPrice    Decimal? @map("unit_price") @db.Decimal(15, 2)
+  totalPrice   Decimal? @map("total_price") @db.Decimal(15, 2)
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  maintenance Maintenance @relation(fields: [maintenanceId], references: [id], onDelete: Cascade)
+
+  @@map("maintenance_parts")
+}
+
+// 8. Tamir Kayıtları
+model Repair {
+  id               Int      @id @default(autoincrement())
+  vehicleId        Int      @map("vehicle_id")
+  repairDate       DateTime @map("repair_date") @db.Date
+  km               Int
+  repairType       String   @map("repair_type")
+  description      String
+  serviceId        Int?     @map("service_id")
+  mechanicName     String?  @map("mechanic_name")
+  responsibleName  String?  @map("responsible_name")
+  responsiblePhone String? @map("responsible_phone")
+  servicePhone     String?  @map("service_phone")
+  serviceLocation  String?  @map("service_location")
+  partsCost        Decimal  @default(0) @map("parts_cost") @db.Decimal(15, 2)
+  laborCost        Decimal  @default(0) @map("labor_cost") @db.Decimal(15, 2)
+  totalAmount      Decimal  @map("total_amount") @db.Decimal(15, 2)
+  invoiceUrl       String?  @map("invoice_url")
+  photos           Json?
+  notes            String?
+  createdBy        Int      @map("created_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  vehicle Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  service Company? @relation(fields: [serviceId], references: [id])
+  creator User     @relation(fields: [createdBy], references: [id])
+
+  @@index([vehicleId])
+  @@map("repairs")
+}
+
+// 9. Kasko
+model Casco {
+  id             Int      @id @default(autoincrement())
+  vehicleId      Int      @map("vehicle_id")
+  companyId      Int?     @map("company_id")
+  policyNumber   String   @map("policy_number")
+  startDate      DateTime @map("start_date") @db.Date
+  endDate        DateTime @map("end_date") @db.Date
+  premium        Decimal  @db.Decimal(15, 2)
+  coverage       String?
+  deductible     Decimal? @db.Decimal(15, 2)
+  policyFileUrl  String?  @map("policy_file_url")
+  invoiceUrl     String?  @map("invoice_url")
+  createdBy      Int      @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  vehicle Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id])
+  creator User     @relation(fields: [createdBy], references: [id])
+
+  @@index([vehicleId])
+  @@index([endDate])
+  @@map("casco")
+}
+
+// 10. Trafik Sigortası
+model Insurance {
+  id             Int      @id @default(autoincrement())
+  vehicleId      Int      @map("vehicle_id")
+  companyId      Int?     @map("company_id")
+  agencyId       Int?     @map("agency_id")
+  policyNumber   String   @map("policy_number")
+  startDate      DateTime @map("start_date") @db.Date
+  endDate        DateTime @map("end_date") @db.Date
+  premium        Decimal  @db.Decimal(15, 2)
+  coverage       String?
+  policyFileUrl  String?  @map("policy_file_url")
+  invoiceUrl     String?  @map("invoice_url")
+  createdBy      Int      @map("created_by")
+  createdAt      DateTime @default(now()) @map("created_at")
+  updatedAt      DateTime @updatedAt @map("updated_at")
+
+  vehicle Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id])
+  agency  Company? @relation("InsuranceAgency", fields: [agencyId], references: [id])
+  creator User     @relation(fields: [createdBy], references: [id])
+
+  @@index([vehicleId])
+  @@index([endDate])
+  @@map("insurance")
+}
+
+// 11. Hasar Kayıtları
+model Damage {
+  id               Int      @id @default(autoincrement())
+  vehicleId        Int      @map("vehicle_id")
+  damageDate       DateTime @map("damage_date") @db.Date
+  km               Int?
+  damageType       String   @map("damage_type")
+  description      String
+  damageLocation   String?  @map("damage_location")
+  faultStatus      String?  @map("fault_status")
+  insuranceFileUrl String?  @map("insurance_file_url")
+  expertName       String?  @map("expert_name")
+  serviceId        Int?     @map("service_id")
+  damageAmount     Decimal? @map("damage_amount") @db.Decimal(15, 2)
+  insurancePaid    Decimal  @default(0) @map("insurance_paid") @db.Decimal(15, 2)
+  companyPaid      Decimal  @default(0) @map("company_paid") @db.Decimal(15, 2)
+  photos           Json?
+  documents        Json?
+  createdBy        Int      @map("created_by")
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  vehicle Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  service Company? @relation(fields: [serviceId], references: [id])
+  creator User     @relation(fields: [createdBy], references: [id])
+
+  @@index([vehicleId])
+  @@map("damages")
+}
+
+// 12. Lastikler
+model Tire {
+  id              Int          @id @default(autoincrement())
+  brand           String
+  model           String?
+  size            String
+  season          TireSeason   @default(all_season)
+  productionDate  DateTime?    @map("production_date") @db.Date
+  dotInfo         String?      @map("dot_info")
+  serialNumber    String?      @map("serial_number")
+  plyRating       String?      @map("ply_rating")
+  loadIndex       String?      @map("load_index")
+  speedRating     String?      @map("speed_rating")
+  treadDepth      Decimal?     @map("tread_depth") @db.Decimal(5, 2)
+  purchaseDate    DateTime?    @map("purchase_date") @db.Date
+  purchasePrice   Decimal?     @map("purchase_price") @db.Decimal(15, 2)
+  currentVehicleId Int?        @map("current_vehicle_id")
+  currentPosition TirePosition? @map("current_position")
+  status          String       @default("mounted")
+  notes           String?
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  currentVehicle Vehicle?      @relation("CurrentVehicle", fields: [currentVehicleId], references: [id])
+  history        TireHistory[]
+
+  @@index([currentVehicleId])
+  @@map("tires")
+}
+
+// 13. Lastik Geçmişi
+model TireHistory {
+  id           Int          @id @default(autoincrement())
+  tireId       Int          @map("tire_id")
+  vehicleId    Int          @map("vehicle_id")
+  position     TirePosition
+  mountedDate  DateTime     @map("mounted_date") @db.Date
+  removedDate  DateTime?    @map("removed_date") @db.Date
+  mountKm      Int?         @map("mount_km")
+  removeKm     Int?         @map("remove_km")
+  changeReason String?      @map("change_reason")
+  createdBy    Int          @map("created_by")
+  createdAt    DateTime     @default(now()) @map("created_at")
+
+  tire    Tire    @relation(fields: [tireId], references: [id], onDelete: Cascade)
+  vehicle Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  creator User    @relation(fields: [createdBy], references: [id])
+
+  @@index([tireId])
+  @@map("tire_history")
+}
+
+// 14. Giderler
+model Expense {
+  id             Int             @id @default(autoincrement())
+  vehicleId      Int             @map("vehicle_id")
+  expenseDate    DateTime        @map("expense_date") @db.Date
+  km             Int?
+  amount         Decimal         @db.Decimal(15, 2)
+  companyId      Int?            @map("company_id")
+  category       ExpenseCategory
+  description    String?
+  invoiceUrl     String?         @map("invoice_url")
+  paymentMethod  String?         @map("payment_method")
+  paymentStatus  String          @default("paid") @map("payment_status")
+  createdBy      Int             @map("created_by")
+  createdAt      DateTime        @default(now()) @map("created_at")
+  updatedAt      DateTime        @updatedAt @map("updated_at")
+
+  vehicle Vehicle  @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  company Company? @relation(fields: [companyId], references: [id])
+  creator User     @relation(fields: [createdBy], references: [id])
+
+  @@index([vehicleId])
+  @@index([expenseDate])
+  @@map("expenses")
+}
+
+// 15. Belgeler
+model Document {
+  id                Int      @id @default(autoincrement())
+  vehicleId         Int      @map("vehicle_id")
+  documentType      String   @map("document_type")
+  title             String
+  fileUrl           String   @map("file_url")
+  relatedEntityType String?  @map("related_entity_type")
+  relatedEntityId   Int?     @map("related_entity_id")
+  uploadedBy        Int      @map("uploaded_by")
+  createdAt         DateTime @default(now()) @map("created_at")
+
+  vehicle  Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  uploader User    @relation(fields: [uploadedBy], references: [id])
+
+  @@map("documents")
+}
+
+// 16. Bildirimler
+model Notification {
+  id                Int              @id @default(autoincrement())
+  userId            Int              @map("user_id")
+  vehicleId         Int?             @map("vehicle_id")
+  notificationType  NotificationType @map("notification_type")
+  title             String
+  message           String
+  relatedEntityType String?          @map("related_entity_type")
+  relatedEntityId   Int?             @map("related_entity_id")
+  isRead            Boolean          @default(false) @map("is_read")
+  createdAt         DateTime         @default(now()) @map("created_at")
+
+  user    User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  vehicle Vehicle? @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+
+  @@index([userId, isRead])
+  @@map("notifications")
+}
+
+// 17. Otomatik İş Kuralları
+model TaskRule {
+  id             Int          @id @default(autoincrement())
+  ruleName       String       @map("rule_name")
+  ruleType       String       @map("rule_type")
+  entityType     String       @map("entity_type")
+  daysBefore     Int          @map("days_before")
+  taskType       String       @map("task_type")
+  priority       TaskPriority @default(medium)
+  autoCreateTask Boolean      @default(false) @map("auto_create_task")
+  isActive       Boolean      @default(true) @map("is_active")
+  createdAt      DateTime     @default(now()) @map("created_at")
+  updatedAt      DateTime     @updatedAt @map("updated_at")
+
+  @@map("task_rules")
+}
+
+// 18. Araç İşlem Geçmişi
+model VehicleHistory {
+  id          Int      @id @default(autoincrement())
+  vehicleId   Int      @map("vehicle_id")
+  actionType  String   @map("action_type")
+  actionDate  DateTime @default(now()) @map("action_date")
+  km          Int?
+  description String?
+  performedBy Int?     @map("performed_by")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  vehicle   Vehicle @relation(fields: [vehicleId], references: [id], onDelete: Cascade)
+  performer User?   @relation(fields: [performedBy], references: [id])
+
+  @@index([vehicleId])
+  @@map("vehicle_history")
+}
+
+// 19. Değişiklik Geçmişi (Audit)
+model AuditLog {
+  id         Int      @id @default(autoincrement())
+  tableName  String   @map("table_name")
+  recordId   Int      @map("record_id")
+  fieldName  String   @map("field_name")
+  oldValue   String?  @map("old_value")
+  newValue   String?  @map("new_value")
+  changedBy  Int?     @map("changed_by")
+  changedAt  DateTime @default(now()) @map("changed_at")
+
+  user User? @relation(fields: [changedBy], references: [id])
+
+  @@map("audit_logs")
+}

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Filo Yönetim - Mobil Test</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; color: #333; }
+  .container { max-width: 480px; margin: 0 auto; padding: 16px; }
+  .card { background: white; border-radius: 12px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 8px rgba(0,0,0,0.08); }
+  h1 { font-size: 22px; margin-bottom: 16px; color: #1a1a1a; }
+  h2 { font-size: 16px; margin-bottom: 12px; color: #555; }
+  input, select, button { width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 10px; font-size: 16px; margin-bottom: 10px; }
+  button { background: #007AFF; color: white; border: none; font-weight: 600; cursor: pointer; }
+  button:active { opacity: 0.8; }
+  button.secondary { background: #34C759; }
+  button.danger { background: #FF3B30; }
+  .result { background: #f0f0f0; padding: 12px; border-radius: 8px; font-size: 13px; overflow-x: auto; white-space: pre-wrap; word-break: break-word; margin-top: 10px; }
+  .error { background: #FFE5E5; color: #C00; }
+  .success { background: #E5F5E5; color: #060; }
+  .nav { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 8px; margin-bottom: 12px; }
+  .nav button { width: auto; padding: 10px 16px; font-size: 14px; white-space: nowrap; }
+  .hidden { display: none; }
+  .stat-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .stat-box { background: #007AFF; color: white; padding: 16px; border-radius: 10px; text-align: center; }
+  .stat-box h3 { font-size: 24px; margin-bottom: 4px; }
+  .stat-box p { font-size: 12px; opacity: 0.9; }
+  .vehicle-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; border-bottom: 1px solid #eee; }
+  .vehicle-item:last-child { border-bottom: none; }
+  .plate { font-weight: 700; color: #007AFF; font-size: 16px; }
+  .badge { padding: 4px 10px; border-radius: 20px; font-size: 11px; font-weight: 600; }
+  .badge-green { background: #E5F5E5; color: #34C759; }
+  .badge-orange { background: #FFF4E5; color: #FF9500; }
+  .badge-red { background: #FFE5E5; color: #FF3B30; }
+  .badge-gray { background: #F0F0F0; color: #999; }
+  label { font-size: 13px; color: #666; margin-bottom: 4px; display: block; }
+  .section { margin-bottom: 20px; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🚛 Filo Yönetim</h1>
+
+  <!-- GİRİŞ EKRANI -->
+  <div id="loginScreen" class="card">
+    <h2>🔐 Giriş Yap</h2>
+    <label>API URL</label>
+    <input type="text" id="apiUrl" placeholder="http://192.168.1.105:3000" value="http://localhost:3000">
+    <label>E-posta</label>
+    <input type="email" id="email" value="admin@filo.com">
+    <label>Şifre</label>
+    <input type="password" id="password" value="admin123">
+    <button onclick="login()">Giriş Yap</button>
+    <div id="loginResult" class="result hidden"></div>
+  </div>
+
+  <!-- ANA EKRAN -->
+  <div id="mainScreen" class="hidden">
+    <div class="nav">
+      <button onclick="showScreen('dashboard')">📊 Dashboard</button>
+      <button onclick="showScreen('vehicles')">🚗 Araçlar</button>
+      <button onclick="showScreen('addVehicle')">➕ Araç Ekle</button>
+      <button onclick="showScreen('addMaintenance')">🔧 Bakım</button>
+    </div>
+
+    <!-- DASHBOARD -->
+    <div id="dashboardScreen" class="screen">
+      <div class="card">
+        <h2>📊 Dashboard Özeti</h2>
+        <div class="stat-grid" id="dashboardStats">
+          <div class="stat-box"><h3>-</h3><p>Yükleniyor...</p></div>
+        </div>
+        <button onclick="loadDashboard()" class="secondary" style="margin-top:12px">🔄 Yenile</button>
+      </div>
+    </div>
+
+    <!-- ARAÇ LİSTESİ -->
+    <div id="vehiclesScreen" class="screen hidden">
+      <div class="card">
+        <h2>🚗 Araçlar</h2>
+        <div id="vehicleList"><p>Yükleniyor...</p></div>
+        <button onclick="loadVehicles()" class="secondary" style="margin-top:12px">🔄 Yenile</button>
+      </div>
+    </div>
+
+    <!-- ARAÇ EKLE -->
+    <div id="addVehicleScreen" class="screen hidden">
+      <div class="card">
+        <h2>➕ Yeni Araç</h2>
+        <label>Plaka</label>
+        <input type="text" id="vPlate" placeholder="35 DC 2468">
+        <label>Marka</label>
+        <input type="text" id="vBrand" placeholder="Mercedes">
+        <label>Model</label>
+        <input type="text" id="vModel" placeholder="Actros">
+        <label>KM</label>
+        <input type="number" id="vKm" placeholder="185420">
+        <button onclick="addVehicle()">💾 Kaydet</button>
+        <div id="addVehicleResult" class="result hidden"></div>
+      </div>
+    </div>
+
+    <!-- BAKIM EKLE -->
+    <div id="addMaintenanceScreen" class="screen hidden">
+      <div class="card">
+        <h2>🔧 Bakım Kaydı</h2>
+        <label>Araç ID</label>
+        <input type="number" id="mVehicleId" placeholder="1">
+        <label>KM</label>
+        <input type="number" id="mKm" placeholder="185500">
+        <label>Bakım Tipi</label>
+        <input type="text" id="mType" placeholder="Periyodik Bakım">
+        <label>Açıklama</label>
+        <input type="text" id="mDesc" placeholder="Yağ değişimi">
+        <label>Servis ID</label>
+        <input type="number" id="mService" placeholder="1">
+        <label>Tutar (TL)</label>
+        <input type="number" id="mAmount" placeholder="12500">
+        <button onclick="addMaintenance()">💾 Kaydet</button>
+        <div id="addMaintResult" class="result hidden"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let token = localStorage.getItem('filo_token') || '';
+let baseUrl = localStorage.getItem('filo_url') || 'http://localhost:3000';
+
+document.getElementById('apiUrl').value = baseUrl;
+
+if (token) {
+  document.getElementById('loginScreen').classList.add('hidden');
+  document.getElementById('mainScreen').classList.remove('hidden');
+  loadDashboard();
+}
+
+async function api(method, path, body) {
+  const opts = {
+    method,
+    headers: { 'Content-Type': 'application/json' }
+  };
+  if (token) opts.headers['Authorization'] = 'Bearer ' + token;
+  if (body) opts.body = JSON.stringify(body);
+  const res = await fetch(baseUrl + path, opts);
+  return res.json();
+}
+
+async function login() {
+  baseUrl = document.getElementById('apiUrl').value.replace(/\/$/, '');
+  localStorage.setItem('filo_url', baseUrl);
+  const data = await api('POST', '/api/auth/login', {
+    email: document.getElementById('email').value,
+    password: document.getElementById('password').value
+  });
+  const el = document.getElementById('loginResult');
+  el.classList.remove('hidden');
+  if (data.success) {
+    token = data.data.token;
+    localStorage.setItem('filo_token', token);
+    el.className = 'result success';
+    el.textContent = '✅ Giriş başarılı!';
+    setTimeout(() => {
+      document.getElementById('loginScreen').classList.add('hidden');
+      document.getElementById('mainScreen').classList.remove('hidden');
+      loadDashboard();
+    }, 800);
+  } else {
+    el.className = 'result error';
+    el.textContent = '❌ ' + (data.message || 'Giriş başarısız');
+  }
+}
+
+function showScreen(name) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.add('hidden'));
+  document.getElementById(name + 'Screen').classList.remove('hidden');
+  if (name === 'dashboard') loadDashboard();
+  if (name === 'vehicles') loadVehicles();
+}
+
+async function loadDashboard() {
+  const data = await api('GET', '/api/dashboard/summary');
+  const grid = document.getElementById('dashboardStats');
+  if (data.success) {
+    const d = data.data;
+    grid.innerHTML = `
+      <div class="stat-box"><h3>${d.totalVehicles}</h3><p>Toplam Araç</p></div>
+      <div class="stat-box" style="background:#34C759"><h3>${d.activeVehicles}</h3><p>Aktif</p></div>
+      <div class="stat-box" style="background:#FF9500"><h3>${d.pendingTasks}</h3><p>Bekleyen İş</p></div>
+      <div class="stat-box" style="background:#FF3B30"><h3>${d.delayedTasks}</h3><p>Geciken</p></div>
+      <div class="stat-box" style="background:#5856D6"><h3>${d.monthTotalExpense.toLocaleString('tr-TR')}₺</h3><p>Bu Ay Gider</p></div>
+      <div class="stat-box" style="background:#AF52DE"><h3>${d.yearTotalExpense.toLocaleString('tr-TR')}₺</h3><p>Bu Yıl Gider</p></div>
+    `;
+  } else {
+    grid.innerHTML = '<div class="stat-box" style="background:#FF3B30"><h3>!</h3><p>Hata: ' + (data.message || 'Bağlantı yok') + '</p></div>';
+  }
+}
+
+async function loadVehicles() {
+  const data = await api('GET', '/api/vehicles');
+  const list = document.getElementById('vehicleList');
+  if (data.success && data.data.length) {
+    list.innerHTML = data.data.map(v => {
+      const statusClass = v.status === 'active' ? 'badge-green' : v.status === 'in_service' ? 'badge-orange' : 'badge-gray';
+      const statusText = v.status === 'active' ? 'Aktif' : v.status === 'in_service' ? 'Serviste' : v.status === 'sold' ? 'Satıldı' : 'Kullanım Dışı';
+      return `<div class="vehicle-item">
+        <div><div class="plate">${v.plate}</div><div style="font-size:13px;color:#666">${v.brand} ${v.model}</div></div>
+        <span class="badge ${statusClass}">${statusText}</span>
+      </div>`;
+    }).join('');
+  } else {
+    list.innerHTML = '<p>Araç bulunamadı.</p>';
+  }
+}
+
+async function addVehicle() {
+  const data = await api('POST', '/api/vehicles', {
+    plate: document.getElementById('vPlate').value,
+    brand: document.getElementById('vBrand').value,
+    model: document.getElementById('vModel').value,
+    currentKm: parseInt(document.getElementById('vKm').value) || 0,
+    status: 'active'
+  });
+  const el = document.getElementById('addVehicleResult');
+  el.classList.remove('hidden');
+  if (data.success) {
+    el.className = 'result success';
+    el.textContent = '✅ Araç eklendi: ' + data.data.plate;
+    document.getElementById('vPlate').value = '';
+    document.getElementById('vBrand').value = '';
+    document.getElementById('vModel').value = '';
+    document.getElementById('vKm').value = '';
+  } else {
+    el.className = 'result error';
+    el.textContent = '❌ ' + JSON.stringify(data, null, 2);
+  }
+}
+
+async function addMaintenance() {
+  const data = await api('POST', '/api/maintenance', {
+    vehicleId: parseInt(document.getElementById('mVehicleId').value),
+    maintenanceDate: new Date().toISOString().split('T')[0],
+    km: parseInt(document.getElementById('mKm').value),
+    maintenanceType: document.getElementById('mType').value,
+    description: document.getElementById('mDesc').value,
+    serviceId: parseInt(document.getElementById('mService').value),
+    totalAmount: parseFloat(document.getElementById('mAmount').value)
+  });
+  const el = document.getElementById('addMaintResult');
+  el.classList.remove('hidden');
+  if (data.success) {
+    el.className = 'result success';
+    el.textContent = '✅ Bakım kaydedildi! Gider otomatik oluşturuldu.';
+  } else {
+    el.className = 'result error';
+    el.textContent = '❌ ' + (data.message || JSON.stringify(data, null, 2));
+  }
+}
+</script>
+</body>
+</html>
