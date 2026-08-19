@@ -17,7 +17,11 @@ api.interceptors.request.use((config) => {
 api.interceptors.response.use(
   (res) => res,
   (err) => {
-    if (err.response?.status === 401) {
+    // Login isteğinin kendisi 401 dönerse (yanlış şifre/e-posta), bu normal bir kullanıcı
+    // hatasıdır — sayfayı yeniden yükleyip mesajı gizlemek yerine LoginPage'in kendi
+    // hata kutusunda göstermesine izin ver.
+    const isLoginRequest = err.config?.url?.includes('/api/auth/login')
+    if (err.response?.status === 401 && !isLoginRequest) {
       localStorage.removeItem('token')
       localStorage.removeItem('user')
       window.location.href = '/login'
